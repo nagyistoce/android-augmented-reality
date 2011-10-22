@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">ARDemo</string>
+    <string name="toogle_fps">Toggle FPS</string>
+    <string name="camera_resolution">Camera Resolution</string>
+</resources>

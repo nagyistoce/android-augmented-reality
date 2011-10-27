@@ -21,8 +21,9 @@ public class MainActivity extends Activity {
         super.onCreate(savedInstanceState);
 
         // Without title we will have more free space
-        if (!requestWindowFeature(Window.FEATURE_NO_TITLE))
-            Log.i(TAG, "Can't request NO_TITLE window feature");
+        if (!requestWindowFeature(Window.FEATURE_NO_TITLE)) {
+            Log.i(TAG, "Can't request NO_TITLE window feature"); 
+        }
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN);
 
         cameraView = new GlCameraView(this);
@@ -100,7 +101,7 @@ public class MainActivity extends Activity {
 
     private GlCameraView cameraView = null;
 
-    private EmptyProcessor empty = new EmptyProcessor();
+    //private EmptyProcessor empty = new EmptyProcessor();
     private CirclesDetector circles = new CirclesDetector();
 
     private static final int TOGGLE_FPS         = Menu.FIRST;

@@ -27,7 +27,6 @@ public class MainActivity extends Activity {
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN);
 
         cameraView = new GlCameraView(this);
-        //cameraView.setFrameProcessor(empty);
         cameraView.setFrameProcessor(circles);
 
         setContentView(cameraView);
@@ -101,7 +100,6 @@ public class MainActivity extends Activity {
 
     private GlCameraView cameraView = null;
 
-    //private EmptyProcessor empty = new EmptyProcessor();
     private CirclesDetector circles = new CirclesDetector();
 
     private static final int TOGGLE_FPS         = Menu.FIRST;

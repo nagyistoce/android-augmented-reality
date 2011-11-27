@@ -210,11 +210,6 @@ namespace
 
 extern "C"
 {
-    /*
-     * Class:     com_googlecode_ardemo_CirclesDetector
-     * Method:    processFrame
-     * Signature: (JJIIZZJJ)V
-     */
     JNIEXPORT void JNICALL Java_com_googlecode_ardemo_CirclesDetector_processFrame(JNIEnv*, jclass,
             jlong frame_, jlong outFrame_, jint patternWidth, jint patternHeight, jboolean drawPoints, jboolean drawAxis, jlong rvec_, jlong tvec_)
     {

@@ -41,8 +41,8 @@ public class GlCameraView extends GLSurfaceView {
         camera.setCameraResolution(resolution);
     }
 
-    public void setFrameProcessor(FrameProcessor frameProc) {
-        camera.setFrameProcessor(frameProc);
+    public void setDetector(Detector detector) {
+        camera.setDetector(detector);
     }
 
     @Override

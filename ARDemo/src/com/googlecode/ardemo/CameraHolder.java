@@ -32,12 +32,12 @@ public class CameraHolder {
         }
     }
 
-    public synchronized void setFrameProcessor(FrameProcessor frameProc) {
-        if (this.frameProc != null)
-            this.frameProc.release();
+    public synchronized void setDetector(Detector detector) {
+        if (this.detector != null)
+            this.detector.release();
 
-        this.frameProc = frameProc;
-        this.frameProc.resume();
+        this.detector = detector;
+        this.detector.resume();
     }
 
     public synchronized void create() {
@@ -98,10 +98,10 @@ public class CameraHolder {
         }
 
         Mat img = null;
-        if (frameProc != null) {
+        if (detector != null) {
             Log.i(TAG, "Process frame");
 
-            img = frameProc.process(camera);
+            img = detector.process(camera);
         }
 
         if (img != null && img.type() == CvType.CV_8UC4) {
@@ -130,7 +130,7 @@ public class CameraHolder {
     }
 
     public synchronized void resume() {
-        frameProc.resume();
+        detector.resume();
     }
 
     public synchronized void release() {
@@ -155,11 +155,11 @@ public class CameraHolder {
         }
         bmp = null;
 
-        if (frameProc != null)
-            frameProc.release();
+        if (detector != null)
+            detector.release();
     }
 
-    private FrameProcessor frameProc = null;
+    private Detector detector = null;
 
     private VideoCapture camera            = null;
     private List<Size>   cameraResolutions = null;

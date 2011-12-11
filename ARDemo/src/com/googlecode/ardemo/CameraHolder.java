@@ -159,16 +159,16 @@ public class CameraHolder {
             detector.release();
     }
 
-    private Detector detector = null;
+    private Detector detector;
 
-    private VideoCapture camera            = null;
-    private List<Size>   cameraResolutions = null;
-    private Size         resolution        = new Size();
+    private VideoCapture camera;
+    private List<Size> cameraResolutions;
+    private Size resolution = new Size();
 
-    private FpsMeter fps     = new FpsMeter();
+    private final FpsMeter fps = new FpsMeter();
     private boolean  showFps = false;
 
-    private Bitmap bmp = null;
+    private Bitmap bmp;
 
-    private static final String TAG = "UltraEye::CameraHolder";
+    private static final String TAG = "ARDemo::CameraHolder";
 }

@@ -67,9 +67,9 @@ public class GlCameraView extends GLSurfaceView {
     private void init() {
         Log.i(TAG, "Init OpenGL");
 
-        setEGLConfigChooser(false); // we don't need depth buffer
+        setEGLConfigChooser(true);
         setRenderer(renderer);
-        setRenderMode(GLSurfaceView.RENDERMODE_CONTINUOUSLY); // we must render continuously
+        setRenderMode(GLSurfaceView.RENDERMODE_CONTINUOUSLY);
 
         Log.i(TAG, "Create buffers");
 
@@ -100,12 +100,10 @@ public class GlCameraView extends GLSurfaceView {
         texCoords.position(0);
     }
 
-    private Renderer renderer = new Renderer() {
+    private final Renderer renderer = new Renderer() {
         @Override
         public void onSurfaceCreated(GL10 gl, EGLConfig config) {
             Log.i(TAG, "onSurfaceCreated");
-
-            gl.glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
 
             gl.glMatrixMode(GL10.GL_PROJECTION);
             gl.glLoadIdentity();
@@ -141,12 +139,14 @@ public class GlCameraView extends GLSurfaceView {
         public void onDrawFrame(GL10 gl) {
             Log.i(TAG, "onDrawFrame");
 
-            gl.glClear(GL10.GL_COLOR_BUFFER_BIT);
+            gl.glClear(GL10.GL_COLOR_BUFFER_BIT | GL10.GL_DEPTH_BUFFER_BIT);
 
             Bitmap bmp = camera.processFrame();
 
             if (bmp != null) {
                 Log.i(TAG, "Draw texture");
+
+                gl.glDisable(GL10.GL_DEPTH_TEST);
 
                 GLUtils.texImage2D(GL10.GL_TEXTURE_2D, 0, bmp, 0);
 
@@ -158,12 +158,12 @@ public class GlCameraView extends GLSurfaceView {
         }
     };
 
-    private CameraHolder camera = new CameraHolder();
+    private final CameraHolder camera = new CameraHolder();
 
-    private int texId = 0;
+    private int texId;
 
-    private FloatBuffer vertices  = null;
-    private FloatBuffer texCoords = null;
+    private FloatBuffer vertices;
+    private FloatBuffer texCoords;
 
-    private static final String TAG = "UltraEye::GlCameraView";
+    private static final String TAG = "ARDemo::GlCameraView";
 }

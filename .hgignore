@@ -5,3 +5,4 @@ libs/*
 obj/*
 .externalToolBuilders/*
 *.stackdump
+ARDemo/NUL

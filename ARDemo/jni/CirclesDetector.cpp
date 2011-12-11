@@ -19,13 +19,57 @@ using namespace std;
 
 namespace
 {
-    Mat getNexusCameraIntrinsics()
-    {
-        static Mat intrinsics;
+    const int c_points4pnpNum = 4;
 
-        if (intrinsics.empty())
+    template <typename T> inline void releaseVector(vector<T>& v)
+    {
+        vector<T> empty;
+        empty.swap(v);
+    }
+
+    class Buffers
+    {
+    public:
+        static Mat intrinsics;
+        static Mat dist_coeffs;
+        static Ptr<FeatureDetector> detector;
+        static vector<Point3f> points3d;
+        static vector<Point2f> ptvec;
+        static vector<Point2f> points2d;
+        static vector<Point3f> axisPoints;
+        static vector<Point2f> imagePoints;
+
+        static void resume()
         {
-            intrinsics = Mat::eye(3, 3, CV_32FC1);
+            createNexusCameraIntrinsics();
+            createNexusCameraDistortion();
+            createSimpleBlobDetector();
+            points3d.resize(c_points4pnpNum);
+            points2d.resize(c_points4pnpNum);
+            axisPoints.resize(4);
+            axisPoints[0] = Point3f(0,0,0);
+            axisPoints[1] = Point3f(5,0,0);
+            axisPoints[2] = Point3f(0,5,0);
+            axisPoints[3] = Point3f(0,0,5);
+        }
+
+        static void release()
+        {
+            intrinsics.release();
+            dist_coeffs.release();
+            detector.release();
+            releaseVector(points3d);
+            releaseVector(ptvec);
+            releaseVector(points2d);
+            releaseVector(axisPoints);
+            releaseVector(imagePoints);
+        }
+
+    private:
+        static void createNexusCameraIntrinsics()
+        {
+            intrinsics.create(3, 3, CV_32FC1);
+
             intrinsics.at<float>(0, 0) = 6.2112274782148313e+02f;
             intrinsics.at<float>(0, 1) = 0.0f;
             intrinsics.at<float>(0, 2) = 3.2355657773204325e+02f;
@@ -37,16 +81,10 @@ namespace
             intrinsics.at<float>(2, 2) = 1.0f;
         }
 
-        return intrinsics;
-    }
-
-    Mat getNexusCameraDistortion()
-    {
-        static Mat dist_coeffs;
-
-        if (dist_coeffs.empty())
+        static void createNexusCameraDistortion()
         {
-            dist_coeffs = Mat::zeros(5, 1, CV_32FC1);
+            dist_coeffs.create(5, 1, CV_32FC1);
+
             dist_coeffs.at<float>(0, 0) = 1.3075382690077034e-01f;
             dist_coeffs.at<float>(1, 0) = -2.4023527434109581e-02f;
             dist_coeffs.at<float>(2, 0) = -1.6705976914291858e-03f;
@@ -54,29 +92,7 @@ namespace
             dist_coeffs.at<float>(4, 0) = -1.2997313877043186e+00f;
         }
 
-        return dist_coeffs;
-    }
-
-    Mat getCameraIntrinsics()
-    {
-        return getNexusCameraIntrinsics();
-    }
-
-    Mat getCameraDistortion()
-    {
-        return getNexusCameraDistortion();
-    }
-
-    Point2f pointNum2XY(int idx, float pointsStep, int patternWidth)
-    {
-        return Point2f(pointsStep * 0.5f * (idx / patternWidth), pointsStep * ((idx % patternWidth) + 0.5f * ((idx / patternWidth) % 2)));
-    }
-
-    Ptr<FeatureDetector> getDefaultDetector()
-    {
-        static Ptr<FeatureDetector> detector;
-
-        if (detector.empty())
+        static void createSimpleBlobDetector()
         {
             SimpleBlobDetector::Params p;
 
@@ -106,29 +122,43 @@ namespace
 
             detector = new SimpleBlobDetector(p);
         }
+    };
 
-        return detector;
+    Mat Buffers::intrinsics;
+    Mat Buffers::dist_coeffs;
+    Ptr<FeatureDetector> Buffers::detector;
+    vector<Point3f> Buffers::points3d;
+    vector<Point2f> Buffers::ptvec;
+    vector<Point2f> Buffers::points2d;
+    vector<Point3f> Buffers::axisPoints;
+    vector<Point2f> Buffers::imagePoints;
+
+    inline Point2f pointNum2XY(int idx, float pointsStep, int patternWidth)
+    {
+        return Point2f(pointsStep * 0.5f * (idx / patternWidth), pointsStep * ((idx % patternWidth) + 0.5f * ((idx / patternWidth) % 2)));
     }
 
     void processFrame(const Mat& frame, Mat& outFrame, int patternWidth, int patternHeight, bool drawPoints, bool drawAxis, Mat& rvec, Mat& tvec)
     {
         const int points4pnp[] = {0, patternWidth - 1, patternWidth * (patternHeight - 1), patternWidth * patternHeight - 1};
-        const int points4pnpNum = sizeof(points4pnp) / sizeof(points4pnp[0]);
 
         Size patternSize(patternWidth, patternHeight);
 
-        static vector<Point3f> points3d(points4pnpNum);
-        for (int i = 0; i < points4pnpNum; ++i)
-            points3d[i] = Point3f(pointNum2XY(points4pnp[i], 1.0f, patternWidth));
+        for (int i = 0; i < c_points4pnpNum; ++i)
+        {
+            Point2f p = pointNum2XY(points4pnp[i], 1.0f, patternWidth);
+            Buffers::points3d[i] = Point3f(p.y, 0.0f, p.x);
+        }
 
-        static vector<Point2f> ptvec;
-        ptvec.clear();
+        Buffers::ptvec.clear();
 
         bool found = false;
         static bool prevFrameFound = false;
         static Rect prevWindow;
 
-        if (prevFrameFound)
+        if (!prevFrameFound)
+            found = findCirclesGrid(frame, patternSize, Buffers::ptvec, CALIB_CB_CLUSTERING | CALIB_CB_ASYMMETRIC_GRID, Buffers::detector);
+        else
         {
             Rect roi;
 
@@ -137,73 +167,54 @@ namespace
             roi.width = min(prevWindow.width * 2, frame.cols - roi.x);
             roi.height = min(prevWindow.height * 2, frame.rows - roi.y);
 
-            found = findCirclesGrid(Mat(frame, roi), patternSize, ptvec, CALIB_CB_CLUSTERING | CALIB_CB_ASYMMETRIC_GRID, getDefaultDetector());
+            found = findCirclesGrid(Mat(frame, roi), patternSize, Buffers::ptvec, CALIB_CB_CLUSTERING | CALIB_CB_ASYMMETRIC_GRID, Buffers::detector);
 
             if (found)
             {
-                for (size_t i = 0, size = ptvec.size(); i < size; ++i)
+                for (size_t i = 0, size = Buffers::ptvec.size(); i < size; ++i)
                 {
-                    ptvec[i].x += roi.x;
-                    ptvec[i].y += roi.y;
+                    Buffers::ptvec[i].x += roi.x;
+                    Buffers::ptvec[i].y += roi.y;
                 }
             }
         }
+
+        if (!found)
+            prevFrameFound = false;
         else
         {
-            found = findCirclesGrid(frame, patternSize, ptvec, CALIB_CB_CLUSTERING | CALIB_CB_ASYMMETRIC_GRID, getDefaultDetector());
-        }
-
-        if (found)
-        {
             prevFrameFound = true;
-            prevWindow = boundingRect(ptvec);
+            prevWindow = boundingRect(Buffers::ptvec);
 
             if (drawPoints)
             {
                 //draw all found points
-                for (size_t i = 0, size = ptvec.size(); i < size; ++i)
+                for (size_t i = 0, size = Buffers::ptvec.size(); i < size; ++i)
                 {
                     if (i == points4pnp[0] || i == points4pnp[1] || i == points4pnp[2] || i == points4pnp[3])
-                        circle(outFrame, ptvec[i], 3, Scalar(250, 0, 0));
+                        circle(outFrame, Buffers::ptvec[i], 3, Scalar(250, 0, 0));
                     else
-                        circle(outFrame, ptvec[i], 3, Scalar(0, 0, 250));
+                        circle(outFrame, Buffers::ptvec[i], 3, Scalar(0, 0, 250));
                 }
             }
 
             //solve pnp
-            static vector<Point2f> points2d(points4pnpNum);
-            for (int i = 0; i < points4pnpNum; ++i)
-                points2d[i] = Point2f(ptvec[points4pnp[i]]);
+            for (int i = 0; i < c_points4pnpNum; ++i)
+                Buffers::points2d[i] = Buffers::ptvec[points4pnp[i]];
 
-            solvePnP(points3d, points2d, getCameraIntrinsics(), getCameraDistortion(), rvec, tvec, false);
+            solvePnP(Buffers::points3d, Buffers::points2d, Buffers::intrinsics, Buffers::dist_coeffs, rvec, tvec, false);
 
             if (drawAxis)
             {
                 //project axis to image
-                static vector<Point3f> axisPoints;
-
-                if (axisPoints.empty())
-                {
-                    axisPoints.resize(4);
-                    axisPoints[0] = Point3f(0,0,0);
-                    axisPoints[1] = Point3f(5,0,0);
-                    axisPoints[2] = Point3f(0,5,0);
-                    axisPoints[3] = Point3f(0,0,5);
-                }
-
-                static vector<Point2f> imagePoints;
-                imagePoints.clear();
-                projectPoints(axisPoints, rvec, tvec, getCameraIntrinsics(), getCameraDistortion(), imagePoints);
+                Buffers::imagePoints.clear();
+                projectPoints(Buffers::axisPoints, rvec, tvec, Buffers::intrinsics, Buffers::dist_coeffs, Buffers::imagePoints);
 
                 //draw axis
-                line(outFrame, imagePoints[0], imagePoints[1], Scalar(250, 0, 0), 3);
-                line(outFrame, imagePoints[0], imagePoints[2], Scalar(0, 250, 0), 3);
-                line(outFrame, imagePoints[0], imagePoints[3], Scalar(0, 0, 250), 3);
+                line(outFrame, Buffers::imagePoints[0], Buffers::imagePoints[1], Scalar(250, 0, 0), 3);
+                line(outFrame, Buffers::imagePoints[0], Buffers::imagePoints[2], Scalar(0, 250, 0), 3);
+                line(outFrame, Buffers::imagePoints[0], Buffers::imagePoints[3], Scalar(0, 0, 250), 3);
             }
-        }
-        else
-        {
-            prevFrameFound = false;
         }
     }
 }
@@ -219,5 +230,15 @@ extern "C"
         Mat* tvec = (Mat*)tvec_;
 
         processFrame(*frame, *outFrame, patternWidth, patternHeight, drawPoints, drawAxis, *rvec, *tvec);
+    }
+
+    JNIEXPORT void JNICALL Java_com_googlecode_ardemo_CirclesDetector_resumeNative(JNIEnv*, jclass)
+    {
+        Buffers::resume();
+    }
+
+    JNIEXPORT void JNICALL Java_com_googlecode_ardemo_CirclesDetector_releaseNative(JNIEnv*, jclass)
+    {
+        Buffers::release();
     }
 }

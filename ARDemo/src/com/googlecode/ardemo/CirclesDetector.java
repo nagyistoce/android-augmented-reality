@@ -19,27 +19,31 @@ public class CirclesDetector implements Detector {
 
     @Override
     public void resume() {
+        resumeNative();
     }
 
     @Override
     public void release() {
         imgRgba.release();
         imgGray.release();
+        releaseNative();
     }
 
-    private int patternWidth = 4;
-    private int patternHeight = 11;
-    private boolean drawPoints = true;
-    private boolean drawAxis = true;
+    private final int patternWidth = 4;
+    private final int patternHeight = 11;
+    private final boolean drawPoints = true;
+    private final boolean drawAxis = true;
 
-    private Mat rvec = new Mat();
-    private Mat tvec = new Mat();
+    private final Mat rvec = new Mat();
+    private final Mat tvec = new Mat();
 
-    private Mat imgRgba = new Mat();
-    private Mat imgGray = new Mat();
+    private final Mat imgRgba = new Mat();
+    private final Mat imgGray = new Mat();
 
     private static native void processFrame(long frame, long outFrame, int patternWidth, int patternHeight, 
                                             boolean drawPoints, boolean drawAxis, long rvec, long tvec);
+    private static native void resumeNative();
+    private static native void releaseNative();
 
     static {
         System.loadLibrary("ARDemo");

@@ -27,8 +27,7 @@ public class MainActivity extends Activity {
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN);
 
         cameraView = new GlCameraView(this);
-        //cameraView.setDetector(circles);
-        cameraView.setDetector(qr);
+        cameraView.setDetector(circles);
 
         setContentView(cameraView);
     }
@@ -99,15 +98,14 @@ public class MainActivity extends Activity {
         return true;
     }
 
-    private GlCameraView cameraView = null;
+    private GlCameraView cameraView;
 
-    //private CirclesDetector circles = new CirclesDetector();
-    private QrDetector qr = new QrDetector();
+    private final CirclesDetector circles = new CirclesDetector();
 
     private static final int TOGGLE_FPS         = Menu.FIRST;
 
     private static final int RESOLUTION_SUBMENU = TOGGLE_FPS + 1;
     private static final int RESOLUTION_START   = RESOLUTION_SUBMENU + 1;
 
-    private static final String TAG = "UltraEye::MainActivity";
+    private static final String TAG = "ARDemo::MainActivity";
 }
